@@ -51,11 +51,13 @@ android {
 
 dependencies {
     implementation ("com.android.volley:volley:1.2.1")
-    implementation("org.osmdroid:osmdroid-android:6.1.18")
+    implementation ("org.osmdroid:osmdroid-android:6.1.18")
+    implementation ("org.osmdroid:osmdroid-android:6.1.11")
     implementation ("androidx.appcompat:appcompat:1.3.1")
     implementation ("com.google.android.gms:play-services-location:18.0.0")
     implementation ("com.squareup.retrofit2:retrofit:2.9.0")
     implementation ("com.squareup.retrofit2:converter-simplexml:2.9.0")
+    implementation ("com.squareup.retrofit2:converter-gson:2.9.0")
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)
@@ -75,6 +77,7 @@ dependencies {
     implementation("io.ktor:ktor-client-cio:2.0.0")
     implementation("io.ktor:ktor-client-content-negotiation:2.0.0")
     implementation("io.ktor:ktor-serialization-kotlinx-json:2.0.0")
+    implementation("com.squareup.retrofit2:converter-gson:2.9.0")
 
 
 }
