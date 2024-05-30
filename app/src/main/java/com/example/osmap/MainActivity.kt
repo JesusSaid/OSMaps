@@ -83,6 +83,7 @@ class MainActivity : AppCompatActivity() {
         mapView.onResume()
     }
 
+    //Prueba
     override fun onPause() {
         super.onPause()
         mapView.onPause()
