@@ -40,10 +40,11 @@ class MainActivity : AppCompatActivity() {
         mapView.controller.setZoom(12.0)
 
         // Llamar a la API para obtener la ruta
-        getRouteFromAPI()
+        val algorithm = "busqueda_profundidad"
+        getRouteFromAPI(algorithm)
     }
 
-    private fun getRouteFromAPI() {
+    private fun getRouteFromAPI(algorithm: String) {
         val retrofit = Retrofit.Builder()
             .baseUrl("http://10.0.2.2:8000")  // Use 10.0.2.2 for the emulator
             .addConverterFactory(GsonConverterFactory.create())
@@ -52,11 +53,10 @@ class MainActivity : AppCompatActivity() {
         val service = retrofit.create(MapService::class.java)
         val request = RouteRequest(
             start = listOf(17.7491299, -97.76906),
-            end = listOf(17.8771799, -97.7329293),
-            algorithm = "busqueda_bidireccional"
+            end = listOf(17.8771799, -97.7329293)
         )
 
-        service.getRoute(request).enqueue(object : Callback<RouteResponse> {
+        service.getRoute(algorithm, request).enqueue(object : Callback<RouteResponse> {
             override fun onResponse(call: Call<RouteResponse>, response: Response<RouteResponse>) {
                 if (response.isSuccessful) {
                     val route = response.body()?.ruta
