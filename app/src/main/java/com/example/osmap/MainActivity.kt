@@ -1,21 +1,22 @@
 package com.example.osmap
 
+import android.graphics.Color
 import android.os.Bundle
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.osmap.network.MapService
+import com.example.osmap.network.RouteRequest
+import com.example.osmap.network.RouteResponse
 import org.osmdroid.config.Configuration
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
-import org.osmdroid.views.overlay.DefaultOverlayManager
-import org.osmdroid.views.overlay.TilesOverlay
+import org.osmdroid.views.overlay.Polyline
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
 import retrofit2.Retrofit
-import retrofit2.converter.simplexml.SimpleXmlConverterFactory
-import retrofit2.http.GET
-import retrofit2.http.Query
+import retrofit2.converter.gson.GsonConverterFactory
 
 class MainActivity : AppCompatActivity() {
 
@@ -30,7 +31,7 @@ class MainActivity : AppCompatActivity() {
 
         // Inicializar el MapView
         mapView = findViewById(R.id.mapView)
-        mapView.setTileSource(TileSourceFactory.DEFAULT_TILE_SOURCE)
+        mapView.setTileSource(TileSourceFactory.MAPNIK)
         mapView.setBuiltInZoomControls(true)
         mapView.setMultiTouchControls(true)
         mapView.minZoomLevel = 2.0
@@ -38,44 +39,52 @@ class MainActivity : AppCompatActivity() {
         mapView.controller.setCenter(GeoPoint(17.8111683, -97.7810027))
         mapView.controller.setZoom(12.0)
 
-        // Descargar y mostrar el mapa
-        downloadAndShowOSMData()
+        // Llamar a la API para obtener la ruta
+        getRouteFromAPI()
     }
 
-    private fun downloadAndShowOSMData() {
+    private fun getRouteFromAPI() {
         val retrofit = Retrofit.Builder()
-            .baseUrl("https://overpass-api.de")
-            .addConverterFactory(SimpleXmlConverterFactory.create())
+            .baseUrl("http://10.0.2.2:8000")  // Use 10.0.2.2 for the emulator
+            .addConverterFactory(GsonConverterFactory.create())
             .build()
 
-        val service = retrofit.create(OverpassService::class.java)
+        val service = retrofit.create(MapService::class.java)
+        val request = RouteRequest(
+            start = listOf(17.7491299, -97.76906),
+            end = listOf(17.8771799, -97.7329293),
+            algorithm = "busqueda_bidireccional"
+        )
 
-        val query = """
-            [out:xml][timeout:25];
-            (
-              way(around:3000000, 17.8111683,-97.7810027)[highway];
-              way(around:3000000, 17.8111683,-97.7810027)[building];
-            );
-            out body;
-            >;
-            out skel qt;
-        """.trimIndent()
-
-        service.getMapData(query).enqueue(object : Callback<String> {
-            override fun onResponse(call: Call<String>, response: Response<String>) {
+        service.getRoute(request).enqueue(object : Callback<RouteResponse> {
+            override fun onResponse(call: Call<RouteResponse>, response: Response<RouteResponse>) {
                 if (response.isSuccessful) {
-                    // Mostrar el mapa
-                    mapView.invalidate()
-                    Toast.makeText(this@MainActivity, "Mapa cargado exitosamente", Toast.LENGTH_SHORT).show()
+                    val route = response.body()?.ruta
+                    if (route != null) {
+                        displayRouteOnMap(route)
+                        Toast.makeText(this@MainActivity, "Ruta cargada exitosamente", Toast.LENGTH_SHORT).show()
+                    } else {
+                        Toast.makeText(this@MainActivity, "No se encontró la ruta", Toast.LENGTH_SHORT).show()
+                    }
                 } else {
-                    Toast.makeText(this@MainActivity, "Error al descargar datos de OSM", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this@MainActivity, "Error al obtener la ruta", Toast.LENGTH_SHORT).show()
                 }
             }
 
-            override fun onFailure(call: Call<String>, t: Throwable) {
-                Toast.makeText(this@MainActivity, "Error al descargar datos de OSM", Toast.LENGTH_SHORT).show()
+            override fun onFailure(call: Call<RouteResponse>, t: Throwable) {
+                Toast.makeText(this@MainActivity, "Error al conectarse con la API: ${t.message}", Toast.LENGTH_SHORT).show()
             }
         })
+    }
+
+    private fun displayRouteOnMap(route: List<List<Double>>) {
+        val geoPoints = route.map { GeoPoint(it[1], it[0]) }
+        val polyline = Polyline().apply {
+            setPoints(geoPoints)
+            outlinePaint.color = Color.RED
+        }
+        mapView.overlayManager.add(polyline)
+        mapView.invalidate()
     }
 
     override fun onResume() {
@@ -83,7 +92,6 @@ class MainActivity : AppCompatActivity() {
         mapView.onResume()
     }
 
-    //Prueba
     override fun onPause() {
         super.onPause()
         mapView.onPause()
@@ -92,11 +100,5 @@ class MainActivity : AppCompatActivity() {
     override fun onDestroy() {
         super.onDestroy()
         mapView.onDetach()
-    }
-
-    // Interfaz para la API de Overpass
-    interface OverpassService {
-        @GET("/api/interpreter")
-        fun getMapData(@Query("data") query: String): Call<String>
     }
 }
